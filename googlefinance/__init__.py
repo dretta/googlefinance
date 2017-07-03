@@ -9,27 +9,32 @@ except ImportError:  # python 2
 
 __author__ = 'Hongtao Cai'
 
-googleFinanceKeyToFullName = {
-    u'id'     : u'ID',
-    u't'      : u'StockSymbol',
-    u'e'      : u'Index',
-    u'l'      : u'LastTradePrice',
-    u'l_cur'  : u'LastTradeWithCurrency',
-    u'ltt'    : u'LastTradeTime',
-    u'lt_dts' : u'LastTradeDateTime',
-    u'lt'     : u'LastTradeDateTimeLong',
-    u'div'    : u'Dividend',
-    u'yld'    : u'Yield',
-    u's'      : u'LastTradeSize',
-    u'c'      : u'Change',
-    u'cp'      : u'ChangePercent',
-    u'el'     : u'ExtHrsLastTradePrice',
-    u'el_cur' : u'ExtHrsLastTradeWithCurrency',
-    u'elt'    : u'ExtHrsLastTradeDateTimeLong',
-    u'ec'     : u'ExtHrsChange',
-    u'ecp'    : u'ExtHrsChangePercent',
-    u'pcls_fix': u'PreviousClosePrice'
-}
+def googleFinanceKeyToFullName(params):
+    keyNamePairs = [
+	    (u'id'     , u'ID'),
+	    (u't'      , u'StockSymbol'),
+	    (u'e'      , u'Index'),
+	    (u'l'      , u'LastTradePrice'),
+	    (u'l_cur'  , u'LastTradeWithCurrency'),
+	    (u'ltt'    , u'LastTradeTime'),
+	    (u'lt_dts' , u'LastTradeDateTime'),
+	    (u'lt'     , u'LastTradeDateTimeLong'),
+	    (u'div'    , u'Dividend'),
+	    (u'yld'    , u'Yield'),
+	    (u's'      , u'LastTradeSize'),
+	    (u'c'      , u'Change'),
+	    (u'cp'     , u'ChangePercent'),
+	    (u'el'     , u'ExtHrsLastTradePrice'),
+	    (u'el_cur' , u'ExtHrsLastTradeWithCurrency'),
+	    (u'elt'    , u'ExtHrsLastTradeDateTimeLong'),
+	    (u'ec'     , u'ExtHrsChange'),
+	    (u'ecp'    , u'ExtHrsChangePercent'),
+	    (u'pcls_fix', u'PreviousClosePrice')
+    ]
+    if not params:
+        return { pair[0] : pair[1] for pair in keyNamePairs}
+    else:
+	    return { pair[0] : pair[1] for pair in keyNamePairs if pair[1] in params}
 
 def buildUrl(symbols):
     symbol_list = ','.join([symbol for symbol in symbols])
@@ -70,18 +75,18 @@ def requestNews(symbol):
 
     return article_json
 
-def replaceKeys(quotes):
-    global googleFinanceKeyToFullName
+def replaceKeys(quotes, params):
+    googleFinanceDict = googleFinanceKeyToFullName(params)
     quotesWithReadableKey = []
     for q in quotes:
         qReadableKey = {}
-        for k in googleFinanceKeyToFullName:
+        for k in googleFinanceDict:
             if k in q:
-                qReadableKey[googleFinanceKeyToFullName[k]] = q[k]
+                qReadableKey[googleFinanceDict[k]] = q[k]
         quotesWithReadableKey.append(qReadableKey)
     return quotesWithReadableKey
 
-def getQuotes(symbols):
+def getQuotes(symbols, params=[]):
     '''
     get real-time quotes (index, last trade price, last trade time, etc) for stocks, using google api: http://finance.google.com/finance/info?client=ig&q=symbols
 
@@ -96,24 +101,36 @@ def getQuotes(symbols):
     return:
     [{u'Index': u'NASDAQ', u'LastTradeWithCurrency': u'129.09', u'LastTradeDateTime': u'2015-03-02T16:04:29Z', u'LastTradePrice': u'129.09', u'Yield': u'1.46', u'LastTradeTime': u'4:04PM EST', u'LastTradeDateTimeLong': u'Mar 2, 4:04PM EST', u'Dividend': u'0.47', u'StockSymbol': u'AAPL', u'ID': u'22144'}, {u'Index': u'NASDAQ', u'LastTradeWithCurrency': u'571.34', u'LastTradeDateTime': u'2015-03-02T16:04:29Z', u'LastTradePrice': u'571.34', u'Yield': u'', u'LastTradeTime': u'4:04PM EST', u'LastTradeDateTimeLong': u'Mar 2, 4:04PM EST', u'Dividend': u'', u'StockSymbol': u'GOOG', u'ID': u'304466804484872'}]
 
+    quotes = getQuotes('INTC', )
+    return:
+    [{"LastTradeDateTime": "2017-06-30T16:00:03Z", "StockSymbol": "INTC", "LastTradeWithCurrency": "33.74"}]
+    
     :param symbols: a single symbol or a list of stock symbols
+    :param params: obtain specific values from each quote, default is empty, which returns all values 
     :return: real-time quotes list
     '''
     if type(symbols) == type('str'):
         symbols = [symbols]
     content = json.loads(request(symbols))
-    return replaceKeys(content);
+    return replaceKeys(content, params)
 
 def getNews(symbol):
-    return requestNews(symbol);
+    return requestNews(symbol)
 
 if __name__ == '__main__':
     try:
         symbols = sys.argv[1]
     except:
-        symbols = "GOOG,AAPL"
+        symbols = "GOOG,AAPL,INTC"
+        
+    try:
+        values = sys.argv[2]
+    except:
+        values = "StockSymbol,LastTradeWithCurrency,LastTradeDateTime"
 
     symbols = symbols.split(',')
+    values = values.split(',')
 
     print(json.dumps(getNews("GOOG"), indent=2))
     print(json.dumps(getQuotes(symbols), indent=2))        
+    print(json.dumps(getQuotes(symbols, values), indent=2))
